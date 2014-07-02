@@ -85,6 +85,7 @@ func (u *SshPortManage) Update(conn *sql.DB, pubport, cnum string, isplus bool, 
 	return nil
 }
 
+//查数据库，筛选出最佳可使用的port
 func (u *SshPortManage) GetBestUsePort(conn *sql.DB, logid int64) (SshPort, error) {
 	var sshPortOb SshPort
 	tableName := u.TableName()

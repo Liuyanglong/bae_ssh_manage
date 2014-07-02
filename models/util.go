@@ -46,6 +46,7 @@ func DeleteContainerUserFromProxy(rulelist []SshRule, logid int64) error {
 	return nil
 }
 
+//获取logid
 func GetLogId(jsonstr []byte) (int64, error) {
 	f := make(map[string]interface{})
 	err := json.Unmarshal(jsonstr, &f)
@@ -54,6 +55,7 @@ func GetLogId(jsonstr []byte) (int64, error) {
 	}
 
 	var logid int64
+	//强制将logid统一成int64型
 	f_logid := f["logid"]
 	switch f_logid.(type) {
 	case int:
