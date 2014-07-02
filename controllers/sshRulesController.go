@@ -86,6 +86,7 @@ func (this *SshRulesController) Get() {
 	defer dbconn.Close()
 
 	sshRulesM := new(models.SshRuleManage)
+	//获取全部的规则
 	if containerName == "" {
 		rulelist, err := sshRulesM.QueryByUid(dbconn, uid, 0)
 		if err != nil {
@@ -98,6 +99,7 @@ func (this *SshRulesController) Get() {
 		this.ServeJson()
 	}
 
+	//获取这个指定的container的规则
 	sshRulesOb, err := sshRulesM.Query(dbconn, uid, containerName, 0)
 	if err != nil {
 		logs.Error("ssh rule query error:", err, 0)

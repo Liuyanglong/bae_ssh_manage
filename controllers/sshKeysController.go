@@ -23,6 +23,7 @@ func (this *SshKeysController) Post() {
 		this.StopRun()
 	}
 
+	//获取请求中的logid参数
 	logid, err := models.GetLogId(this.Ctx.Input.RequestBody)
 	if err != nil {
 		this.Ctx.Output.SetStatus(403)
@@ -41,6 +42,8 @@ func (this *SshKeysController) Post() {
 
 	dbconn.Exec("START TRANSACTION")
 	logs.Normal("start transaction", "logid:", logid)
+	
+	//将用户的公钥键值对插入db
 	sshKeysM := new(models.SshKeysManage)
 	err = sshKeysM.Insert(dbconn, sshKeysOb, logid)
 	if err != nil {
@@ -52,7 +55,7 @@ func (this *SshKeysController) Post() {
 		this.StopRun()
 	}
 
-	//reload ssh public key
+	//更新新的公钥后，重新更新这个用户的ssh public key
 	err = this.reloadSshPublicKeys(dbconn, strconv.Itoa(sshKeysOb.Uid), logid)
 	if err != nil {
 		logs.Error("reloadSshPublicKeys error!", err, sshKeysOb, "logid:", logid)
@@ -86,6 +89,7 @@ func (this *SshKeysController) Get() {
 	defer dbconn.Close()
 
 	sshKeysM := new(models.SshKeysManage)
+	//获取这个用户的所有公钥对
 	sshKeysOb, err := sshKeysM.GetAll(dbconn, uid, 0)
 	if err != nil {
 		logs.Error("sshkeysM getall error:", err, 0)
@@ -211,6 +215,7 @@ func (this *SshKeysController) Put() {
 	this.StopRun()
 }
 
+//重新加载用户的数据
 func (this *SshKeysController) reloadSshPublicKeys(dbconn *sql.DB, uid string, logid int64) error {
 	sshKeysM := new(models.SshKeysManage)
 	pubSshKeyMap, errall := sshKeysM.GetAll(dbconn, uid, logid)

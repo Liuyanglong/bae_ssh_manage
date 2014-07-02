@@ -7,6 +7,11 @@ import (
 	"strconv"
 )
 
+/*
+* 将 用户的公钥数据 更新到对应的 proxy host
+* @param rulelist 
+* @param keylist 用户公钥
+*/
 func UpdateRule(rulelist []SshRule, keylist map[string]string, logid int64) error {
 	logs.Normal("rule list:", rulelist, "key list", keylist, "logid:", logid)
 	token := beego.AppConfig.String("proxy_url_token")
