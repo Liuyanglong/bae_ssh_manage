@@ -1,10 +1,11 @@
 package routers
 
 import (
-	"agent_ssh/controllers"
 	"github.com/astaxie/beego"
+	"ssh_proxy_manage/agent_ssh/controllers"
 )
 
 func init() {
-	beego.RESTRouter("/sshAgent", &controllers.SshAgentController{})
+	beego.Router("/updateContainer", &controllers.SshAgentController{}, "get:UpdateContainerRull")
+	beego.Router("/deleteContainer", &controllers.SshAgentController{}, "get:DeleteContainerRull")
 }

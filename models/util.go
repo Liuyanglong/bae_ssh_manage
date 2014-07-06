@@ -8,7 +8,7 @@ import (
 )
 
 func UpdateRule(rulelist []SshRule, keylist map[string]string, logid int64) error {
-	logs.Normal("rule list:", rulelist, "key list", keylist, "logid:", logid)
+	logs.Normal("update rule list:", rulelist, "key list", keylist, "logid:", logid)
 	token := beego.AppConfig.String("proxy_url_token")
 	keylistStr, _ := json.Marshal(keylist)
 	//useradd
