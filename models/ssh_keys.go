@@ -107,15 +107,12 @@ func (u *SshKeysManage) Update(conn *sql.DB, keysOb SshKeys, logid int64) error 
 	param := make([]interface{}, 0)
 	param = append(param, keysOb.Uid)
 	sqlu := "update " + tableName + " set uid = " + strconv.Itoa(keysOb.Uid)
-	if keysOb.KeyName != "" {
-		sqlu += " ,keyName='" + keysOb.KeyName + "'"
-		param = append(param, keysOb.KeyName)
-	}
+
 	if keysOb.PublicKey != "" {
 		sqlu += " ,publicKey='" + keysOb.PublicKey + "'"
 		param = append(param, keysOb.PublicKey)
 	}
-	sqlu += " where uid = " + strconv.Itoa(keysOb.Uid)
+	sqlu += " where uid = " + strconv.Itoa(keysOb.Uid) + " and keyName='" + keysOb.KeyName + "'"
 	logs.Normal("sql update sql is:", sqlu, "logid:", logid)
 	param = append(param, keysOb.Uid)
 	_, err := conn.Exec(sqlu)

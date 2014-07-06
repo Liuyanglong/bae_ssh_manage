@@ -8,5 +8,11 @@ import (
 
 func main() {
 	logs.Normal("It is a New Begin!")
+	go checkProxyHostAvail()
 	beego.Run()
+}
+
+//检查proxy server是否可用
+func checkProxyHostAvail() {
+
 }

@@ -81,7 +81,7 @@ func noTest_Delete(t *testing.T) {
 
 	//case 2,table do not have this recode
 	err = sshProxyM.Delete(dbconn, "long")
-	fmt.Println("case 2:",err)
+	fmt.Println("case 2:", err)
 	if err != nil {
 		t.Error(err)
 	}

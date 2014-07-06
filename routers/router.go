@@ -6,11 +6,11 @@ import (
 )
 
 func init() {
-	//beego.RESTRouter("/object", &controllers.ObjectController{})
+	beego.Router("/sshPort/getAvailPort", &controllers.SshPortController{}, "get:GetAvailPort")
 	beego.RESTRouter("/sshPort", &controllers.SshPortController{})
 	beego.RESTRouter("/sshProxyServer", &controllers.SshProxyServerController{})
-	beego.Router("/sshKeys", &controllers.SshKeysController{})
-	beego.Router("/sshKeys/:objectId/:keyname", &controllers.SshKeysController{})
-	beego.Router("/sshRules", &controllers.SshRulesController{})
-	beego.Router("/sshRules/:uid/:container", &controllers.SshRulesController{})
+	beego.Router("/sshKeys/:objectId/:keyname", &controllers.SshKeysController{}, "get:GetMsgByKeyname")
+	beego.RESTRouter("/sshKeys", &controllers.SshKeysController{})
+	beego.Router("/sshRules/:uid/:container", &controllers.SshRulesController{}, "get:GetByContainer;delete:DeleteByContainer")
+	beego.Router("/sshRules/:uid", &controllers.SshRulesController{}, "get:GetByUid;delete:DeleteByUid;put:Put;post:Post")
 }

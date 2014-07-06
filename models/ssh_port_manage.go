@@ -57,6 +57,28 @@ func (u *SshPortManage) Query(conn *sql.DB, pubport string, logid int64) (SshPor
 	return sshPortOb, nil
 }
 
+func (u *SshPortManage) QueryAll(conn *sql.DB, logid int64) ([]SshPort, error) {
+	tableName := u.TableName()
+	sql := "select publicPort,proxyHost, containerNumber,isAvail from " + tableName
+	logs.Normal("query sql:", sql, "logid:", logid)
+	rows, err := conn.Query(sql)
+	if err != nil {
+		logs.Error("query error!", err, sql, "logid:", logid)
+		return []SshPort{}, err
+	}
+	sshPortObs := make([]SshPort, 0)
+	for rows.Next() {
+		sshPortOb := SshPort{}
+		if err = rows.Scan(&sshPortOb.PublicPort, &sshPortOb.ProxyHost, &sshPortOb.ContainerNumber, &sshPortOb.IsAvail); err != nil {
+			logs.Error("rows scan error:", err, "logid:", logid)
+			return []SshPort{}, err
+		}
+		sshPortObs = append(sshPortObs, sshPortOb)
+	}
+
+	return sshPortObs, nil
+}
+
 func (u *SshPortManage) Delete(conn *sql.DB, pubport string, logid int64) error {
 	tableName := u.TableName()
 	sqld := "delete from " + tableName + " where publicPort = " + pubport
@@ -85,7 +107,6 @@ func (u *SshPortManage) Update(conn *sql.DB, pubport, cnum string, isplus bool, 
 	return nil
 }
 
-//查数据库，筛选出最佳可使用的port
 func (u *SshPortManage) GetBestUsePort(conn *sql.DB, logid int64) (SshPort, error) {
 	var sshPortOb SshPort
 	tableName := u.TableName()

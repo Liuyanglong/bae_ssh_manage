@@ -7,11 +7,6 @@ import (
 	"strconv"
 )
 
-/*
-* 将 用户的公钥数据 更新到对应的 proxy host
-* @param rulelist 
-* @param keylist 用户公钥
-*/
 func UpdateRule(rulelist []SshRule, keylist map[string]string, logid int64) error {
 	logs.Normal("rule list:", rulelist, "key list", keylist, "logid:", logid)
 	token := beego.AppConfig.String("proxy_url_token")
@@ -51,7 +46,6 @@ func DeleteContainerUserFromProxy(rulelist []SshRule, logid int64) error {
 	return nil
 }
 
-//获取logid
 func GetLogId(jsonstr []byte) (int64, error) {
 	f := make(map[string]interface{})
 	err := json.Unmarshal(jsonstr, &f)
@@ -60,9 +54,10 @@ func GetLogId(jsonstr []byte) (int64, error) {
 	}
 
 	var logid int64
-	//强制将logid统一成int64型
 	f_logid := f["logid"]
 	switch f_logid.(type) {
+	case string:
+		logid, _ = strconv.ParseInt(f_logid.(string), 10, 64)
 	case int:
 		logid = int64(f["logid"].(int))
 	case int64:

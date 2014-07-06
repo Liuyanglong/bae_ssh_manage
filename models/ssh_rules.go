@@ -62,7 +62,7 @@ func (u *SshRuleManage) Query(conn *sql.DB, uid, cname string, logid int64) (Ssh
 
 func (u *SshRuleManage) QueryByUid(conn *sql.DB, uid string, logid int64) ([]SshRule, error) {
 	tableName := u.TableName()
-	var rulelist []SshRule
+	rulelist := make([]SshRule, 0)
 	sql := "select containerName,sshPort,proxyHost,uiIpPort,uid from " + tableName + " where uid= " + uid
 	logs.Normal("sql query by uid:", sql, "logid:", logid)
 	rows, err := conn.Query(sql)
@@ -124,12 +124,9 @@ func (u *SshRuleManage) Update(conn *sql.DB, ruleOb SshRule, logid int64) error 
 		sqlu += " ,uiIpPort='" + ruleOb.UiIpPort + "'"
 		param = append(param, ruleOb.UiIpPort)
 	}
-	if ruleOb.Uid != 0 {
-		uidstr := strconv.Itoa(ruleOb.Uid)
-		sqlu += " ,uid=" + uidstr
-		param = append(param, ruleOb.Uid)
-	}
-	sqlu += " where containerName = '" + ruleOb.ContainerName + "'"
+
+	uidstr := strconv.Itoa(ruleOb.Uid)
+	sqlu += " where containerName = '" + ruleOb.ContainerName + "' and uid = " + uidstr
 	logs.Normal("sql update:", sqlu, "logid:", logid)
 	param = append(param, ruleOb.ContainerName)
 	_, err := conn.Exec(sqlu)

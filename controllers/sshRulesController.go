@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego"
 	"ssh_proxy_manage/logs"
 	"ssh_proxy_manage/models"
@@ -13,6 +14,7 @@ type SshRulesController struct {
 	beego.Controller
 }
 
+//curl -i -X POST localhost:9090/sshRules/9999 -d '{"name":"aiaiia","port":4242,"rule":"~~~~","uid":9999}'
 func (this *SshRulesController) Post() {
 	var sshRulesOb models.SshRule
 	requestBody := string(this.Ctx.Input.RequestBody)
@@ -67,7 +69,38 @@ func (this *SshRulesController) Post() {
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 }
 
-func (this *SshRulesController) Get() {
+//curl -i -X GET localhost:9090/sshRules/9999
+func (this *SshRulesController) GetByUid() {
+	uid := this.Ctx.Input.Params[":uid"]
+	if uid == "" {
+		this.Ctx.Output.SetStatus(403)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"param error"}`))
+		this.StopRun()
+	}
+
+	dbconn, err := models.InitDbConn(0)
+	if err != nil {
+		logs.Error("init db conn error:", err, 0)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"init db conn error"}`))
+		this.StopRun()
+	}
+	defer dbconn.Close()
+
+	sshRulesM := new(models.SshRuleManage)
+	rulelist, err := sshRulesM.QueryByUid(dbconn, uid, 0)
+	if err != nil {
+		logs.Error("ssh rule query by uid error:", err, 0)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
+		this.StopRun()
+	}
+	this.Data["json"] = rulelist
+	this.ServeJson()
+}
+
+//curl -i -X GET localhost:9090/sshRules/9999/aiaiia
+func (this *SshRulesController) GetByContainer() {
 	uid := this.Ctx.Input.Params[":uid"]
 	containerName := this.Ctx.Input.Params[":container"]
 	if uid == "" {
@@ -86,7 +119,6 @@ func (this *SshRulesController) Get() {
 	defer dbconn.Close()
 
 	sshRulesM := new(models.SshRuleManage)
-	//获取全部的规则
 	if containerName == "" {
 		rulelist, err := sshRulesM.QueryByUid(dbconn, uid, 0)
 		if err != nil {
@@ -99,7 +131,6 @@ func (this *SshRulesController) Get() {
 		this.ServeJson()
 	}
 
-	//获取这个指定的container的规则
 	sshRulesOb, err := sshRulesM.Query(dbconn, uid, containerName, 0)
 	if err != nil {
 		logs.Error("ssh rule query error:", err, 0)
@@ -111,7 +142,57 @@ func (this *SshRulesController) Get() {
 	this.ServeJson()
 }
 
-func (this *SshRulesController) Delete() {
+//curl -i -X GET localhost:9090/sshRules/9999
+func (this *SshRulesController) DeleteByUid() {
+	uid := this.Ctx.Input.Params[":uid"]
+	if uid == "" {
+		this.Ctx.Output.SetStatus(403)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"param error"}`))
+		this.StopRun()
+	}
+	logid, _ := this.GetInt("logid")
+	if logid == 0 {
+		this.Ctx.Output.SetStatus(403)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"logid param error"}`))
+		this.StopRun()
+	}
+	logs.Normal("delete param:", "uid:", uid, "logid:", logid)
+	dbconn, err := models.InitDbConn(logid)
+	if err != nil {
+		logs.Error("init db conn err:", err, "logid:", logid)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"init db conn error"}`))
+		this.StopRun()
+	}
+	defer dbconn.Close()
+
+	dbconn.Exec("START TRANSACTION")
+	logs.Normal("start transaction", "logid:", logid)
+
+	sshRulesM := new(models.SshRuleManage)
+	delrulelist, _ := sshRulesM.QueryByUid(dbconn, uid, logid)
+	err = sshRulesM.DeleteByUid(dbconn, uid, logid)
+	if err != nil {
+		dbconn.Exec("ROLLBACK")
+		logs.Normal("ROLLBACK", "logid:", logid)
+		logs.Error("delete by uid err:", err, "logid:", logid)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
+		this.StopRun()
+	}
+	err = models.DeleteContainerUserFromProxy(delrulelist, logid)
+	if err != nil {
+		logs.Error("DeleteContainerUserFromProxy error:", err, "logid:", logid)
+	}
+	dbconn.Exec("COMMIT")
+	logs.Normal("COMMIT", "logid:", logid)
+	logs.Normal("delete OK!", "logid:", logid)
+	this.Ctx.Output.Body([]byte(`{"result":0}`))
+	this.StopRun()
+}
+
+//curl -i -X GET localhost:9090/sshRules/9999/aiaiia
+func (this *SshRulesController) DeleteByContainer() {
 	uid := this.Ctx.Input.Params[":uid"]
 	containerName := this.Ctx.Input.Params[":container"]
 	if uid == "" {
@@ -181,13 +262,15 @@ func (this *SshRulesController) Delete() {
 	this.StopRun()
 }
 
+//curl -i -X PUT localhost:9090/sshRules/9999 -d '{"name":"aiaiia","port":4242,"rule":"~~~~","uid":9999}'
 func (this *SshRulesController) Put() {
 	requestBody := string(this.Ctx.Input.CopyBody())
 
 	var sshRulesOb models.SshRule
 	err := json.Unmarshal(this.Ctx.Input.CopyBody(), &sshRulesOb)
+	fmt.Println(string(this.Ctx.Input.CopyBody()))
 	if err != nil {
-		//fmt.Println(err)
+		fmt.Println(err)
 		this.Ctx.Output.SetStatus(403)
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"param error"}`))
 		this.StopRun()

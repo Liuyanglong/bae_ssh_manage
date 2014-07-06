@@ -13,6 +13,7 @@ type SshKeysController struct {
 	beego.Controller
 }
 
+//curl localhost:9090/sshKeys -X POST -i -d '{"uid":4444444,"keyname":"testliuyanglong","publickey":"dasd"}''
 func (this *SshKeysController) Post() {
 	var sshKeysOb models.SshKeys
 	requestBody := string(this.Ctx.Input.RequestBody)
@@ -23,7 +24,6 @@ func (this *SshKeysController) Post() {
 		this.StopRun()
 	}
 
-	//获取请求中的logid参数
 	logid, err := models.GetLogId(this.Ctx.Input.RequestBody)
 	if err != nil {
 		this.Ctx.Output.SetStatus(403)
@@ -42,8 +42,6 @@ func (this *SshKeysController) Post() {
 
 	dbconn.Exec("START TRANSACTION")
 	logs.Normal("start transaction", "logid:", logid)
-	
-	//将用户的公钥键值对插入db
 	sshKeysM := new(models.SshKeysManage)
 	err = sshKeysM.Insert(dbconn, sshKeysOb, logid)
 	if err != nil {
@@ -55,7 +53,7 @@ func (this *SshKeysController) Post() {
 		this.StopRun()
 	}
 
-	//更新新的公钥后，重新更新这个用户的ssh public key
+	//reload ssh public key
 	err = this.reloadSshPublicKeys(dbconn, strconv.Itoa(sshKeysOb.Uid), logid)
 	if err != nil {
 		logs.Error("reloadSshPublicKeys error!", err, sshKeysOb, "logid:", logid)
@@ -71,6 +69,7 @@ func (this *SshKeysController) Post() {
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 }
 
+//curl localhost:9090/sshKeys/123456
 func (this *SshKeysController) Get() {
 	uid := this.Ctx.Input.Params[":objectId"]
 	if uid == "" {
@@ -89,7 +88,6 @@ func (this *SshKeysController) Get() {
 	defer dbconn.Close()
 
 	sshKeysM := new(models.SshKeysManage)
-	//获取这个用户的所有公钥对
 	sshKeysOb, err := sshKeysM.GetAll(dbconn, uid, 0)
 	if err != nil {
 		logs.Error("sshkeysM getall error:", err, 0)
@@ -101,6 +99,38 @@ func (this *SshKeysController) Get() {
 	this.ServeJson()
 }
 
+//curl -i -X GET 'localhost:9090/sshKeys/123456/testccc?logid=4223'
+func (this *SshKeysController) GetMsgByKeyname() {
+	uid := this.Ctx.Input.Params[":objectId"]
+	keyname := this.Ctx.Input.Params[":keyname"]
+	if uid == "" || keyname == "" {
+		this.Ctx.Output.SetStatus(403)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"param error"}`))
+		this.StopRun()
+	}
+
+	dbconn, err := models.InitDbConn(0)
+	if err != nil {
+		logs.Error("db init error!", err, 0)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"init db conn error"}`))
+		this.StopRun()
+	}
+	defer dbconn.Close()
+
+	sshKeysM := new(models.SshKeysManage)
+	sshKeysOb, err := sshKeysM.Query(dbconn, uid, keyname, 0)
+	if err != nil {
+		logs.Error("sshkeysM getall error:", err, 0)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
+		this.StopRun()
+	}
+	this.Data["json"] = sshKeysOb
+	this.ServeJson()
+}
+
+//curl -i -X DELETE 'localhost:9090/sshKeys/4444444?logid=4223'
 func (this *SshKeysController) Delete() {
 	uid := this.Ctx.Input.Params[":objectId"]
 	keyname := this.Ctx.Input.Params[":keyname"]
@@ -171,6 +201,7 @@ func (this *SshKeysController) Delete() {
 	this.StopRun()
 }
 
+//curl localhost:9090/sshKeys -X PUT -i -d '{"uid":5544,"keyname":"testliuyanglong","publickey":"d","logid":"444444"}'
 func (this *SshKeysController) Put() {
 	requestBody := string(this.Ctx.Input.CopyBody())
 	var sshKeysOb models.SshKeys
@@ -208,6 +239,17 @@ func (this *SshKeysController) Put() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
 		this.StopRun()
 	}
+
+	//reload ssh public key
+	err = this.reloadSshPublicKeys(dbconn, strconv.Itoa(sshKeysOb.Uid), logid)
+	if err != nil {
+		dbconn.Exec("ROLLBACK")
+		logs.Normal("ROLLBACK", "logid:", logid)
+		logs.Error("reload ssh public key error:", err, "logid:", logid)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":` + err.Error() + `}`))
+		this.StopRun()
+	}
 	dbconn.Exec("COMMIT")
 	logs.Normal("COMMIT", "logid:", logid)
 	logs.Normal("ssh key put ok", "logid:", logid)
@@ -215,7 +257,6 @@ func (this *SshKeysController) Put() {
 	this.StopRun()
 }
 
-//重新加载用户的数据
 func (this *SshKeysController) reloadSshPublicKeys(dbconn *sql.DB, uid string, logid int64) error {
 	sshKeysM := new(models.SshKeysManage)
 	pubSshKeyMap, errall := sshKeysM.GetAll(dbconn, uid, logid)
