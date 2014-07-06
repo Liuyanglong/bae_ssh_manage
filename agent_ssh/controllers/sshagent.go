@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
+	"os"
 	"os/exec"
+	"ssh_proxy_manage/logs"
 )
 
 type SshAgentController struct {
@@ -48,24 +50,36 @@ func (this *SshAgentController) UpdateContainerRull() {
 		this.StopRun()
 	}
 
-	//fmt.Println( keylist )
 	keylistMap := make(map[string]string)
 	err := json.Unmarshal([]byte(keylist), &keylistMap)
 	if err != nil {
-		fmt.Println(err)
+		logs.Error("UpdateContainerRull keylist error", keylistMap, err)
 		this.Ctx.Output.SetStatus(403)
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"param error"}`))
 		this.StopRun()
 	}
-	fmt.Println(keylistMap, container, logid, token)
-	//this.StopRun()
+	logs.Normal("UpdateContainerRull params: ", container, keylistMap, token, logid)
 	//增加用户
 	this.system("useradd " + container)
 	authKeyStr := ""
 	for _, authkey := range keylistMap {
-		authKeyStr += authkey
+		authKeyStr += authkey + "\n"
 	}
-	fmt.Println(authKeyStr)
+
+	logs.Normal("UpdateContainerRull authkey is ", authKeyStr)
+
+	//将内容写入authorized_key文件
+	authkeyfile := "/home/ssh/authorized_key_" + container
+	logs.Normal("UpdateContainerRull authkey file is ", authkeyfile)
+	fout, err := os.Create(authkeyfile)
+	defer fout.Close()
+	if err != nil {
+		logs.Error("authkeyfile is :", authkeyfile, err)
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.Output.Body([]byte(`{"result":1,"error":"error happened"}`))
+		this.StopRun()
+	}
+	fout.WriteString(authKeyStr)
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 	this.StopRun()
 }
