@@ -220,27 +220,6 @@ func (this *SshRulesController) DeleteByContainer() {
 	logs.Normal("start transaction", "logid:", logid)
 
 	sshRulesM := new(models.SshRuleManage)
-	if containerName == "" {
-		delrulelist, _ := sshRulesM.QueryByUid(dbconn, uid, logid)
-		err = sshRulesM.DeleteByUid(dbconn, uid, logid)
-		if err != nil {
-			dbconn.Exec("ROLLBACK")
-			logs.Normal("ROLLBACK", "logid:", logid)
-			logs.Error("delete by uid err:", err, "logid:", logid)
-			this.Ctx.Output.SetStatus(500)
-			this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
-			this.StopRun()
-		}
-		err = models.DeleteContainerUserFromProxy(delrulelist, logid)
-		if err != nil {
-			logs.Error("DeleteContainerUserFromProxy error:", err, "logid:", logid)
-		}
-		dbconn.Exec("COMMIT")
-		logs.Normal("COMMIT", "logid:", logid)
-		logs.Normal("delete OK!", "logid:", logid)
-		this.Ctx.Output.Body([]byte(`{"result":0}`))
-		this.StopRun()
-	}
 	delrule, _ := sshRulesM.Query(dbconn, uid, containerName, logid)
 	err = sshRulesM.Delete(dbconn, uid, containerName, logid)
 	if err != nil {

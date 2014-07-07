@@ -73,8 +73,9 @@ func (this *SshAgentController) UpdateContainerRull() {
 		this.StopRun()
 	}
 	logs.Normal("UpdateContainerRull params: ", container, keylistMap, token, logid, uiip, uiport, logid)
+	
 	//增加用户
-	//	this.system("/usr/sbin/useradd " + container,logid)
+	this.system("/usr/sbin/useradd " + container,logid)
 	authKeyStr := ""
 	for _, authkey := range keylistMap {
 		authKeyStr += `command="ssh bae@` + uiip + ` -p ` + uiport + `" ` + authkey + "\n"
@@ -99,7 +100,41 @@ func (this *SshAgentController) UpdateContainerRull() {
 }
 
 func (this *SshAgentController) DeleteContainerRull() {
+container := this.GetString("container")
+	if container == "" {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"container missing"}`))
+		this.StopRun()
+	}
 
+	logid := this.GetString("logid")
+	if logid == "" {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"logid missing"}`))
+		this.StopRun()
+	}
+
+	token := this.GetString("token")
+	if token == "" {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"token missing"}`))
+		this.StopRun()
+	}
+
+	if this.checkToken(token) == false {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"token error"}`))
+		this.StopRun()
+	}
+
+	//删除用户
+	this.system("/usr/sbin/userdel " + container,logid)
+
+	//删除对应的authorized_key文件
+	authkeyfile := "/home/ssh/authorized_key_" + container
+	this.system("rm -f "+authkeyfile)
+	this.Ctx.Output.Body([]byte(`{"result":0}`))
+	this.StopRun()
 }
 
 func (this *SshAgentController) checkToken(token string) bool {

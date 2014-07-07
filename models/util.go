@@ -57,11 +57,21 @@ func DeleteContainerUserFromProxy(rulelist []SshRule, logid int64) error {
 		//this url todo
 		proxyDelUrl := proxyHost + ":9090/deleteContainer?container=" + container + "&logid=" + strconv.FormatInt(logid, 10) + "&token=" + token
 		logs.Normal("curl delete container url:", proxyDelUrl, "logid:", logid)
-		/**
-		 *
-		 * todo call proxyAddUrl
-		 *
-		 */
+		
+		req := httplib.Get(proxyDelUrl)
+		output := make(map[string]interface{})
+		err := req.ToJson(&output)
+		if err != nil {
+			logs.Error("request from "+proxyDelUrl+" error:", err, logid)
+			return err
+		}
+
+		if output["result"].(int) == 0 {
+			logs.Normal(proxyDelUrl, "response ok!", logid)
+			continue
+		} else {
+			logs.Error(proxyDelUrl+" error:", output["error"], logid)
+		}
 	}
 	return nil
 }
