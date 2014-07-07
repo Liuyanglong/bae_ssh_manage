@@ -4,7 +4,7 @@ import (
 	//"agent_ssh/models"
 	"bytes"
 	"encoding/json"
-	"fmt"
+	//"fmt"
 	"github.com/astaxie/beego"
 	"os"
 	"os/exec"
@@ -44,6 +44,20 @@ func (this *SshAgentController) UpdateContainerRull() {
 		this.StopRun()
 	}
 
+	uiip := this.GetString("uiip")
+	if uiip == "" {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"uiip missing"}`))
+		this.StopRun()
+	}
+
+	uiport := this.GetString("uiport")
+	if uiport == "" {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"uiport missing"}`))
+		this.StopRun()
+	}
+
 	if this.checkToken(token) == false {
 		this.Ctx.Output.SetStatus(400)
 		this.Ctx.Output.Body([]byte(`{"result":1,"message":"token error"}`))
@@ -53,28 +67,28 @@ func (this *SshAgentController) UpdateContainerRull() {
 	keylistMap := make(map[string]string)
 	err := json.Unmarshal([]byte(keylist), &keylistMap)
 	if err != nil {
-		logs.Error("UpdateContainerRull keylist error", keylistMap, err)
+		logs.Error("UpdateContainerRull keylist error", keylistMap, err, logid)
 		this.Ctx.Output.SetStatus(403)
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"param error"}`))
 		this.StopRun()
 	}
-	logs.Normal("UpdateContainerRull params: ", container, keylistMap, token, logid)
+	logs.Normal("UpdateContainerRull params: ", container, keylistMap, token, logid, uiip, uiport, logid)
 	//增加用户
-	this.system("useradd " + container)
+	//	this.system("/usr/sbin/useradd " + container,logid)
 	authKeyStr := ""
 	for _, authkey := range keylistMap {
-		authKeyStr += authkey + "\n"
+		authKeyStr += `command="ssh bae@` + uiip + ` -p ` + uiport + `" ` + authkey + "\n"
 	}
 
-	logs.Normal("UpdateContainerRull authkey is ", authKeyStr)
+	logs.Normal("UpdateContainerRull authkey is ", authKeyStr, logid)
 
 	//将内容写入authorized_key文件
 	authkeyfile := "/home/ssh/authorized_key_" + container
-	logs.Normal("UpdateContainerRull authkey file is ", authkeyfile)
+	logs.Normal("UpdateContainerRull authkey file is ", authkeyfile, logid)
 	fout, err := os.Create(authkeyfile)
 	defer fout.Close()
 	if err != nil {
-		logs.Error("authkeyfile is :", authkeyfile, err)
+		logs.Error("authkeyfile is :", authkeyfile, err, logid)
 		this.Ctx.Output.SetStatus(500)
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"error happened"}`))
 		this.StopRun()
@@ -93,15 +107,16 @@ func (this *SshAgentController) checkToken(token string) bool {
 	return check_token == token
 }
 
-func (this *SshAgentController) system(s string) error {
+func (this *SshAgentController) system(s, logid string) error {
 	cmd := exec.Command("/bin/sh", "-c", s)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("error happened:", err)
+		logs.Error("exec command error happened:", err, "the command is :", s, logid)
 		return err
 	}
-	fmt.Printf("%s\n", out.String(), cmd.ProcessState)
+	logs.Normal("exec command result is: ", out.String(), "process state is :", cmd.ProcessState, logid)
+	//fmt.Printf("%s\n", out.String(), cmd.ProcessState)
 	return err
 }

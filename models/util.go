@@ -2,9 +2,12 @@ package models
 
 import (
 	"encoding/json"
+	//"fmt"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/httplib"
 	"ssh_proxy_manage/logs"
 	"strconv"
+	"strings"
 )
 
 func UpdateRule(rulelist []SshRule, keylist map[string]string, logid int64) error {
@@ -15,14 +18,31 @@ func UpdateRule(rulelist []SshRule, keylist map[string]string, logid int64) erro
 	for _, sshRuleOb := range rulelist {
 		container := sshRuleOb.ContainerName
 		proxyHost := sshRuleOb.ProxyHost
+		uiIpPort := sshRuleOb.UiIpPort
+		uiArr := strings.Split(uiIpPort, ":")
+		if len(uiArr) != 2 {
+			logs.Error("update rule uiIpPort Error!", uiIpPort, container, proxyHost)
+			continue
+		}
 		//this url todo
-		proxyAddUrl := proxyHost + ":9090/updateContainer?container=" + container + "&keylist=" + string(keylistStr) + "&logid=" + strconv.FormatInt(logid, 10) + "&token=" + token
+		proxyAddUrl := "http://" + proxyHost + ":9090/updateContainer?container=" + container + "&uiip=" + uiArr[0] + "&uiport=" + uiArr[1] + "&keylist=" + string(keylistStr) + "&logid=" + strconv.FormatInt(logid, 10) + "&token=" + token
 		logs.Normal("curl add container url:", proxyAddUrl, "logid:", logid)
-		/**
-		 *
-		 * todo call proxyAddUrl
-		 *
-		 */
+
+		req := httplib.Get(proxyAddUrl)
+		output := make(map[string]interface{})
+		err := req.ToJson(&output)
+		if err != nil {
+			logs.Error("request from "+proxyAddUrl+" error:", err, logid)
+			return err
+		}
+
+		if output["result"].(int) == 0 {
+			logs.Normal(proxyAddUrl, "response ok!", logid)
+			continue
+		} else {
+			logs.Error(proxyAddUrl+" error:", output["error"], logid)
+		}
+
 	}
 	return nil
 }
