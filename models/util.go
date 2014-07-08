@@ -57,7 +57,7 @@ func DeleteContainerUserFromProxy(rulelist []SshRule, logid int64) error {
 		//this url todo
 		proxyDelUrl := proxyHost + ":9090/deleteContainer?container=" + container + "&logid=" + strconv.FormatInt(logid, 10) + "&token=" + token
 		logs.Normal("curl delete container url:", proxyDelUrl, "logid:", logid)
-		
+
 		req := httplib.Get(proxyDelUrl)
 		output := make(map[string]interface{})
 		err := req.ToJson(&output)

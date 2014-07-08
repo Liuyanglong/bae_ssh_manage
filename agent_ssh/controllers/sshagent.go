@@ -73,9 +73,9 @@ func (this *SshAgentController) UpdateContainerRull() {
 		this.StopRun()
 	}
 	logs.Normal("UpdateContainerRull params: ", container, keylistMap, token, logid, uiip, uiport, logid)
-	
+
 	//增加用户
-	this.system("/usr/sbin/useradd " + container,logid)
+	this.system("/usr/sbin/useradd "+container, logid)
 	authKeyStr := ""
 	for _, authkey := range keylistMap {
 		authKeyStr += `command="ssh bae@` + uiip + ` -p ` + uiport + `" ` + authkey + "\n"
@@ -100,7 +100,7 @@ func (this *SshAgentController) UpdateContainerRull() {
 }
 
 func (this *SshAgentController) DeleteContainerRull() {
-container := this.GetString("container")
+	container := this.GetString("container")
 	if container == "" {
 		this.Ctx.Output.SetStatus(400)
 		this.Ctx.Output.Body([]byte(`{"result":1,"message":"container missing"}`))
@@ -128,11 +128,11 @@ container := this.GetString("container")
 	}
 
 	//删除用户
-	this.system("/usr/sbin/userdel " + container,logid)
+	this.system("/usr/sbin/userdel "+container, logid)
 
 	//删除对应的authorized_key文件
 	authkeyfile := "/home/ssh/authorized_key_" + container
-	this.system("rm -f "+authkeyfile)
+	this.system("rm -f "+authkeyfile, logid)
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 	this.StopRun()
 }
