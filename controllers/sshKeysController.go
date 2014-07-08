@@ -167,21 +167,16 @@ func (this *SshKeysController) Delete() {
 			this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
 			this.StopRun()
 		}
-		dbconn.Exec("COMMIT")
-		logs.Normal("COMMIT", "logid:", logid)
-		logs.Normal("delete by key OK", "logid:", logid)
-		this.Ctx.Output.Body([]byte(`{"result":0}`))
-		this.StopRun()
-	}
-
-	err = sshKeysM.Delete(dbconn, uid, logid)
-	if err != nil {
-		dbconn.Exec("ROLLBACK")
-		logs.Normal("ROLLBACK", "logid:", logid)
-		logs.Error("delete by uid error:", err, "logid:", logid)
-		this.Ctx.Output.SetStatus(500)
-		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
-		this.StopRun()
+	} else {
+		err = sshKeysM.Delete(dbconn, uid, logid)
+		if err != nil {
+			dbconn.Exec("ROLLBACK")
+			logs.Normal("ROLLBACK", "logid:", logid)
+			logs.Error("delete by uid error:", err, "logid:", logid)
+			this.Ctx.Output.SetStatus(500)
+			this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
+			this.StopRun()
+		}
 	}
 
 	//reload ssh public key
