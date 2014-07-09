@@ -184,7 +184,7 @@ func (this *SshRulesController) DeleteByUid() {
 	if err != nil {
 		logs.Error("DeleteContainerUserFromProxy error:", err, "logid:", logid)
 		dbconn.Exec("ROLLBACK")
-		logs.Normal("ROLLBACK",logid)
+		logs.Normal("ROLLBACK", logid)
 	}
 	dbconn.Exec("COMMIT")
 	logs.Normal("COMMIT", "logid:", logid)
@@ -232,17 +232,17 @@ func (this *SshRulesController) DeleteByContainer() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
 		this.StopRun()
 	}
-	
+
 	err = models.DeleteContainerUserFromProxy([]models.SshRule{delrule}, logid)
 	if err != nil {
 		logs.Error("Delete single Container From Proxy error:", err, "logid:", logid)
 		dbconn.Exec("ROLLBACK")
-		logs.Normal("ROLLBACK",logid)
+		logs.Normal("ROLLBACK", logid)
 	}
-	
+
 	dbconn.Exec("COMMIT")
 	logs.Normal("COMMIT", "logid:", logid)
-	
+
 	logs.Normal("delete OK!", "logid:", logid)
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 	this.StopRun()
@@ -290,8 +290,8 @@ func (this *SshRulesController) Put() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
 		this.StopRun()
 	}
-	
-	sshRuleMsg, err := sshRulesM.Query(dbconn, sshRulesOb.Uid, sshRulesOb.ContainerName, logid)
+
+	sshRuleMsg, err := sshRulesM.Query(dbconn, strconv.Itoa(sshRulesOb.Uid), sshRulesOb.ContainerName, logid)
 	if err != nil {
 		dbconn.Exec("ROLLBACK")
 		logs.Normal("ROLLBACK", "logid:", logid)
@@ -300,7 +300,7 @@ func (this *SshRulesController) Put() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"` + err.Error() + `"}`))
 		this.StopRun()
 	}
-	
+
 	if err = this.reloadRules(dbconn, sshRuleMsg, logid); err != nil {
 		dbconn.Exec("ROLLBACK")
 		logs.Normal("ROLLBACK", "logid:", logid)
@@ -309,7 +309,7 @@ func (this *SshRulesController) Put() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":` + err.Error() + `}`))
 		this.StopRun()
 	}
-	
+
 	dbconn.Exec("COMMIT")
 	logs.Normal("COMMIT", "logid:", logid)
 	logs.Normal("put OK", "logid:", logid)
