@@ -94,6 +94,16 @@ func (this *SshAgentController) UpdateContainerRull() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"error happened"}`))
 		this.StopRun()
 	}
+	
+	//生成id_rsa&id_rsa.pub
+	this.system("/bin/echo -e 'y\n' | /usr/bin/ssh-keygen -t rsa -f /home/bae/.ssh/id_rsa -N '' -q > /dev/null", logid)
+	
+	/*
+	*
+	*  todo 将生成的id_rsa.pub 通过调度传到container为authorized_keys；
+	*	同时将container中/home/bae/.ssh的文件设置为root，bae不可读
+	*/
+	
 	fout.WriteString(authKeyStr)
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 	this.StopRun()
