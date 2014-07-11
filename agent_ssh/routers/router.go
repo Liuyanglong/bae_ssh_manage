@@ -8,4 +8,6 @@ import (
 func init() {
 	beego.Router("/updateContainer", &controllers.SshAgentController{}, "get:UpdateContainerRull")
 	beego.Router("/deleteContainer", &controllers.SshAgentController{}, "get:DeleteContainerRull")
+	beego.Router("/checkRuleNumber", &controllers.SshAgentController{}, "get:GetRulesNumber")
+
 }

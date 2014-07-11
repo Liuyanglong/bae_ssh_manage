@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"ssh_proxy_manage/logs"
+	"strings"
 )
 
 type SshAgentController struct {
@@ -94,16 +95,16 @@ func (this *SshAgentController) UpdateContainerRull() {
 		this.Ctx.Output.Body([]byte(`{"result":1,"error":"error happened"}`))
 		this.StopRun()
 	}
-	
+
 	//生成id_rsa&id_rsa.pub
 	this.system("/bin/echo -e 'y\n' | /usr/bin/ssh-keygen -t rsa -f /home/bae/.ssh/id_rsa -N '' -q > /dev/null", logid)
-	
+
 	/*
 	*
 	*  todo 将生成的id_rsa.pub 通过调度传到container为authorized_keys；
 	*	同时将container中/home/bae/.ssh的文件设置为root，bae不可读
-	*/
-	
+	 */
+
 	fout.WriteString(authKeyStr)
 	this.Ctx.Output.Body([]byte(`{"result":0}`))
 	this.StopRun()
@@ -147,21 +148,42 @@ func (this *SshAgentController) DeleteContainerRull() {
 	this.StopRun()
 }
 
+func (this *SshAgentController) GetRulesNumber() {
+	token := this.GetString("token")
+	if token == "" {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"token missing"}`))
+		this.StopRun()
+	}
+
+	if this.checkToken(token) == false {
+		this.Ctx.Output.SetStatus(400)
+		this.Ctx.Output.Body([]byte(`{"result":1,"message":"token error"}`))
+		this.StopRun()
+	}
+
+	cmd := "cat /etc/passwd|wc -l"
+	lnum, _ := this.system(cmd, "0")
+	this.Ctx.Output.Body([]byte(`{"result":0,"rule_num":` + lnum + `}`))
+	this.StopRun()
+}
+
 func (this *SshAgentController) checkToken(token string) bool {
 	check_token := beego.AppConfig.String("token")
 	return check_token == token
 }
 
-func (this *SshAgentController) system(s, logid string) error {
+func (this *SshAgentController) system(s, logid string) (string, error) {
 	cmd := exec.Command("/bin/sh", "-c", s)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
 		logs.Error("exec command error happened:", err, "the command is :", s, logid)
-		return err
+		return "", err
 	}
-	logs.Normal("exec command result is: ", out.String(), "process state is :", cmd.ProcessState, logid)
+	output := strings.TrimSpace(out.String())
+	logs.Normal("exec command result is: ", output, "process state is :", cmd.ProcessState, logid)
 	//fmt.Printf("%s\n", out.String(), cmd.ProcessState)
-	return err
+	return output, err
 }
